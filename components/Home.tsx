@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Settings, Folder, Printer, Search, Bell, User, LayoutGrid } from 'lucide-react';
+// Fix: Change react-router-dom import to react-router to resolve missing useNavigate export
+import { useNavigate } from 'react-router';
+import { Settings, Folder, Printer, Search, Bell, User, LayoutGrid, FileText } from 'lucide-react';
 import Card from './Card';
 import { motion } from 'framer-motion';
 
@@ -46,13 +47,22 @@ const Home: React.FC = () => {
         />
       </div>
 
-      <div className="flex items-center space-x-2 mb-4 px-1">
-        <LayoutGrid size={14} className="text-blue-500" />
-        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">সিস্টেম ফিচারস</h3>
+      <div className="flex items-center justify-between mb-4 px-1">
+        <div className="flex items-center space-x-2">
+            <LayoutGrid size={14} className="text-blue-500" />
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">সিস্টেম ফিচারস</h3>
+        </div>
+        <button 
+          onClick={() => navigate('/full-report')}
+          className="flex items-center space-x-1.5 text-blue-400 hover:text-blue-300 transition-colors"
+        >
+          <FileText size={12} />
+          <span className="text-[9px] font-black uppercase tracking-widest">Full HTML Report</span>
+        </button>
       </div>
 
       {/* Feature Grid - 4 Equal Cards */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4 mb-8">
         <Card 
           title="Pipe Specs" 
           icon={<Folder className="w-8 h-8 text-emerald-400" />} 

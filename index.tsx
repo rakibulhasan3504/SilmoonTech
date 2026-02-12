@@ -1,7 +1,8 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { HashRouter } from 'react-router-dom';
+// Fix: Change react-router-dom import to react-router to resolve missing HashRouter export
+import { HashRouter } from 'react-router';
 import App from './App';
 
 const rootElement = document.getElementById('root');

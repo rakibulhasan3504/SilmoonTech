@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+// Fix: Change react-router-dom import to react-router to resolve missing useNavigate and useSearchParams exports
+import { useNavigate, useSearchParams } from 'react-router';
 import { ChevronLeft, Bookmark, BookmarkCheck, Search, Download, Info, Filter, X } from 'lucide-react';
 import { pipeSpecs } from '../data/pipeSpecs';
 
@@ -19,7 +20,7 @@ const PipeFile: React.FC = () => {
     const bookmarks = JSON.parse(localStorage.getItem('pipe_bookmarks') || '[]');
     setIsBookmarked(bookmarks.some((b: any) => b.fileName === 'Pipe file.pdf'));
     
-    const timer = setTimeout(() => setLoading(false), 800);
+    const timer = setTimeout(() => setLoading(false), 600);
     return () => clearTimeout(timer);
   }, []);
 
@@ -39,15 +40,16 @@ const PipeFile: React.FC = () => {
   };
 
   const filteredData = useMemo(() => {
-    // If we have a highlight ID from search, show ONLY that item as details
-    if (highlightId) {
+    // Priority 1: If highlightId exists and no search query, show that specific item
+    if (highlightId && !sizeQuery && !categoryQuery && !lengthQuery) {
       return pipeSpecs.filter(item => item.srNo === highlightId);
     }
 
+    // Priority 2: Filter by all three inputs
     return pipeSpecs.filter(item => {
-      const matchesSize = !sizeQuery || item.size.toLowerCase().includes(sizeQuery.toLowerCase());
-      const matchesCategory = !categoryQuery || item.category.toLowerCase().includes(categoryQuery.toLowerCase());
-      const matchesLength = !lengthQuery || item.length.toLowerCase().includes(lengthQuery.toLowerCase());
+      const matchesSize = !sizeQuery || item.size.toLowerCase().includes(sizeQuery.toLowerCase().trim());
+      const matchesCategory = !categoryQuery || item.category.toLowerCase().includes(categoryQuery.toLowerCase().trim());
+      const matchesLength = !lengthQuery || item.length.toLowerCase().includes(lengthQuery.toLowerCase().trim());
       return matchesSize && matchesCategory && matchesLength;
     });
   }, [sizeQuery, categoryQuery, lengthQuery, highlightId]);
@@ -56,13 +58,15 @@ const PipeFile: React.FC = () => {
     setSizeQuery('');
     setCategoryQuery('');
     setLengthQuery('');
-    if (highlightId) navigate('/pipe'); // Clear the highlight from URL
+    if (highlightId) navigate('/pipe');
   };
 
+  const hasActiveFilters = sizeQuery || categoryQuery || lengthQuery;
+
   return (
-    <div className="flex flex-col h-screen bg-slate-900 text-slate-100 overflow-hidden font-['Hind_Siliguri']">
+    <div className="flex flex-col h-screen bg-[#020617] text-slate-100 overflow-hidden font-['Hind_Siliguri']">
       {/* Top Navigation Bar */}
-      <div className="glass z-50 px-4 py-3 flex items-center justify-between shadow-lg">
+      <div className="glass z-50 px-4 py-3 flex items-center justify-between shadow-lg border-b border-white/5">
         <div className="flex items-center space-x-3">
           <button 
             onClick={() => highlightId ? navigate('/search') : navigate('/')}
@@ -72,21 +76,12 @@ const PipeFile: React.FC = () => {
           </button>
           <div className="flex flex-col">
             <h2 className="text-lg font-bold tracking-wide leading-tight">
-              {highlightId ? 'Item Details' : 'Pipe File'}
+              Pipe Database
             </h2>
-            <span className="text-[10px] text-slate-400 uppercase tracking-widest">Silmoon Specifications</span>
+            <span className="text-[10px] text-slate-400 uppercase tracking-widest font-black">Silmoon Tech System</span>
           </div>
         </div>
         <div className="flex items-center space-x-1">
-          {highlightId && (
-            <button 
-              onClick={resetFilters}
-              className="p-2 rounded-full text-slate-400 hover:text-white hover:bg-white/5 transition-all"
-              title="Show All"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
           <button 
             onClick={toggleBookmark}
             className={`p-2 rounded-full transition-all ${isBookmarked ? 'text-yellow-400 bg-yellow-400/20' : 'text-slate-400 hover:bg-white/10'}`}
@@ -96,105 +91,127 @@ const PipeFile: React.FC = () => {
         </div>
       </div>
 
-      {!highlightId && (
-        <div className="bg-slate-800/80 border-b border-slate-700 p-4 shadow-md">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-6xl mx-auto">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input 
-                type="text" 
-                placeholder="Size (উদাঃ 1/2&quot;)" 
-                value={sizeQuery}
-                onChange={(e) => setSizeQuery(e.target.value)}
-                className="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-200"
-              />
+      {/* Triple Input Search Area */}
+      <div className="bg-slate-900/90 border-b border-slate-700/50 p-4 shadow-2xl relative z-40">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-6xl mx-auto">
+          {/* Size Input */}
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="w-4 h-4 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
             </div>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input 
-                type="text" 
-                placeholder="Category" 
-                value={categoryQuery}
-                onChange={(e) => setCategoryQuery(e.target.value)}
-                className="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-200"
-              />
+            <input 
+              type="text" 
+              placeholder="Size (উদাঃ 1.5)" 
+              value={sizeQuery}
+              onChange={(e) => setSizeQuery(e.target.value)}
+              className="block w-full bg-slate-950 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder:text-slate-600 shadow-inner"
+            />
+          </div>
+
+          {/* Category Input */}
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Filter className="w-4 h-4 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
             </div>
-            <div className="relative">
-              <Info className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input 
-                type="text" 
-                placeholder="Length" 
-                value={lengthQuery}
-                onChange={(e) => setLengthQuery(e.target.value)}
-                className="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 text-slate-200"
-              />
+            <input 
+              type="text" 
+              placeholder="Category (উদাঃ SWR)" 
+              value={categoryQuery}
+              onChange={(e) => setCategoryQuery(e.target.value)}
+              className="block w-full bg-slate-950 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all placeholder:text-slate-600 shadow-inner"
+            />
+          </div>
+
+          {/* Length Input */}
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Info className="w-4 h-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
             </div>
+            <input 
+              type="text" 
+              placeholder="Length (উদাঃ 10')" 
+              value={lengthQuery}
+              onChange={(e) => setLengthQuery(e.target.value)}
+              className="block w-full bg-slate-950 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all placeholder:text-slate-600 shadow-inner"
+            />
           </div>
         </div>
-      )}
+        
+        {/* Reset Actions */}
+        {(hasActiveFilters || highlightId) && (
+          <div className="flex items-center justify-between mt-3 max-w-6xl mx-auto px-1">
+            <div className="flex items-center space-x-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Filter Active</span>
+            </div>
+            <button 
+              onClick={resetFilters}
+              className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-400 hover:text-white flex items-center space-x-1 py-1 px-3 rounded-full bg-blue-500/10 border border-blue-500/20 transition-all"
+            >
+              <X className="w-3 h-3" />
+              <span>Clear Filter</span>
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 relative overflow-auto p-4 md:p-6 bg-[#0f172a] custom-scrollbar">
+      <main className="flex-1 relative overflow-auto p-4 md:p-6 bg-[#020617] custom-scrollbar">
         {loading ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4">
+          <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4 z-30">
             <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-            <p className="text-slate-400 animate-pulse text-xs uppercase tracking-widest">Loading Data...</p>
+            <p className="text-slate-400 animate-pulse text-[10px] font-black uppercase tracking-[0.3em]">Syncing Records...</p>
           </div>
         ) : (
           <div className="w-full max-w-6xl mx-auto">
-            {highlightId && (
-                <div className="mb-4 flex items-center space-x-2 text-emerald-400 bg-emerald-400/10 p-3 rounded-xl border border-emerald-400/20">
-                    <Info className="w-4 h-4" />
-                    <span className="text-xs font-bold">Showing details for selected search result</span>
-                </div>
-            )}
-            
-            <div className="bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-700/50 shadow-2xl overflow-hidden">
+            <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2rem] border border-white/5 shadow-2xl overflow-hidden mb-24">
               <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left border-collapse min-w-[1000px]">
-                  <thead className="bg-slate-700/50 sticky top-0 z-10">
+                <table className="w-full text-left border-collapse min-w-[950px]">
+                  <thead className="bg-slate-800/80 sticky top-0 z-10 backdrop-blur-md">
                     <tr>
-                      <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700">Sr. No</th>
-                      <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700">Size</th>
-                      <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700">Category</th>
-                      <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700">Colour</th>
-                      <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700">Diameter</th>
-                      <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700">Thickness</th>
-                      <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700">Length</th>
-                      <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700">Weight</th>
-                      <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700">Pin OD</th>
+                      <th className="sticky left-0 z-30 p-4 text-[10px] font-black uppercase tracking-wider text-slate-100 bg-slate-800 border-b border-white/5 border-r border-white/5 w-[110px]">Category</th>
+                      <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500 border-b border-white/5 w-20">Sr. No</th>
+                      <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500 border-b border-white/5 w-24">Size</th>
+                      <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500 border-b border-white/5">Colour</th>
+                      <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500 border-b border-white/5">Diameter</th>
+                      <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500 border-b border-white/5">Thickness</th>
+                      <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500 border-b border-white/5">Length</th>
+                      <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500 border-b border-white/5">Weight</th>
+                      <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500 border-b border-white/5">Pin OD</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-700/50 text-slate-300">
+                  <tbody className="divide-y divide-white/5 text-slate-300">
                     {filteredData.length > 0 ? filteredData.map((item, idx) => (
                       <tr 
                         key={`${item.srNo}-${idx}`} 
-                        className={`hover:bg-blue-500/10 transition-colors group ${item.srNo === highlightId ? 'bg-emerald-500/20' : idx % 2 === 0 ? 'bg-slate-800/30' : 'bg-transparent'}`}
+                        className={`hover:bg-blue-500/10 transition-colors group ${item.srNo === highlightId ? 'bg-emerald-500/20' : idx % 2 === 0 ? 'bg-slate-900/30' : 'bg-transparent'}`}
                       >
-                        <td className="p-4 text-sm font-mono text-slate-500">{item.srNo}</td>
-                        <td className="p-4 text-sm font-bold text-slate-100">{item.size}</td>
-                        <td className="p-4 text-sm font-medium">
-                            <span className="px-2 py-1 rounded-md bg-white/5 border border-white/5 text-slate-300">
+                        <td className={`sticky left-0 z-20 p-4 text-[11px] font-black border-r border-white/5 transition-colors ${item.srNo === highlightId ? 'bg-emerald-900/90' : idx % 2 === 0 ? 'bg-slate-900' : 'bg-[#0f172a]'} group-hover:bg-slate-800`}>
+                            <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/5 text-emerald-400 block truncate max-w-[90px] text-center shadow-inner">
                                 {item.category}
                             </span>
                         </td>
-                        <td className="p-4 text-sm">{item.colour || "—"}</td>
-                        <td className="p-4 text-sm font-mono">{item.diameter || "—"}</td>
-                        <td className="p-4 text-sm font-mono">{item.thickness || "—"}</td>
-                        <td className="p-4 text-sm">{item.length}</td>
-                        <td className="p-4 text-sm font-bold text-blue-400">{item.weight}</td>
-                        <td className="p-4 text-sm text-slate-500">{item.pinOd || "—"}</td>
+                        <td className="p-4 text-[11px] font-mono text-slate-500">{item.srNo}</td>
+                        <td className="p-4 text-xs font-black text-white truncate">{item.size}</td>
+                        <td className="p-4 text-[11px]">{item.colour || "—"}</td>
+                        <td className="p-4 text-[11px] font-mono text-slate-400">{item.diameter || "—"}</td>
+                        <td className="p-4 text-[11px] font-mono text-slate-400">{item.thickness || "—"}</td>
+                        <td className="p-4 text-[11px]">{item.length}</td>
+                        <td className="p-4 text-xs font-black text-blue-400 italic tabular-nums">{item.weight}</td>
+                        <td className="p-4 text-[11px] text-slate-500 font-mono">{item.pinOd || "—"}</td>
                       </tr>
                     )) : (
                         <tr>
-                            <td colSpan={9} className="p-20 text-center">
-                                <Info className="w-16 h-16 text-slate-700 mx-auto mb-4" />
-                                <p className="text-slate-500 text-lg">কোনো তথ্য পাওয়া যায়নি</p>
+                            <td colSpan={9} className="p-32 text-center">
+                                <div className="p-8 bg-slate-900/50 rounded-full border border-white/5 inline-block mb-4 shadow-2xl">
+                                  <Search className="w-12 h-12 text-slate-800" />
+                                </div>
+                                <p className="text-slate-400 font-black uppercase tracking-widest text-sm">কোনো তথ্য খুঁজে পাওয়া যায়নি</p>
                                 <button 
                                   onClick={resetFilters}
-                                  className="mt-4 text-blue-400 hover:underline text-sm font-semibold"
+                                  className="mt-6 text-blue-400 border border-blue-400/20 bg-blue-400/5 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-blue-400/10 transition-all"
                                 >
-                                  সব ডাটা দেখান
+                                  ফিল্টার রিসেট করুন
                                 </button>
                             </td>
                         </tr>
@@ -203,34 +220,34 @@ const PipeFile: React.FC = () => {
                 </table>
               </div>
             </div>
-            <p className="text-[10px] text-slate-600 text-center py-6 italic">
-                * All measurements are based on official Silmoon Pipe specifications.
-            </p>
           </div>
         )}
       </main>
 
       {/* Bottom Status Bar */}
-      <div className="glass px-6 py-4 md:px-12 flex items-center justify-between shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.5)] border-t border-white/5">
+      <div className="glass px-6 py-5 flex items-center justify-between shadow-[0_-15px_30px_-5px_rgba(0,0,0,0.6)] border-t border-white/5 z-50">
         <div className="flex flex-col">
-          <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Total Result</span>
-          <span className="text-xl font-black text-emerald-400 tabular-nums">{filteredData.length} Items</span>
+          <span className="text-[9px] uppercase tracking-[0.2em] text-slate-500 font-black">Filtered Count</span>
+          <span className="text-2xl font-black text-emerald-400 tabular-nums tracking-tighter">{filteredData.length} <span className="text-sm text-slate-500 uppercase">Items</span></span>
         </div>
         
         <button 
-          onClick={() => alert('PDF ডাউনলোড শুরু হচ্ছে...')}
-          className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 active:scale-95 text-white px-6 py-3 rounded-xl text-sm font-bold transition-all shadow-xl shadow-blue-900/40 border border-blue-400/20"
+          onClick={() => navigate('/full-report')}
+          className="flex items-center space-x-2 bg-gradient-to-br from-blue-600 to-indigo-700 hover:scale-105 active:scale-95 text-white px-8 py-4 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest transition-all shadow-2xl shadow-blue-900/50 border border-blue-400/30"
         >
           <Download className="w-4 h-4" />
-          <span className="hidden sm:inline">Download PDF</span>
+          <span>Full Report</span>
         </button>
       </div>
 
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.8); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(71, 85, 105, 1); }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 20px; border: 2px solid transparent; background-clip: content-box; }
+        .sticky.left-0::after {
+          content: ""; position: absolute; top: 0; right: -12px; bottom: 0; width: 12px;
+          background: linear-gradient(to right, rgba(0,0,0,0.3), transparent); pointer-events: none;
+        }
       `}</style>
     </div>
   );

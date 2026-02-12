@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+// Fix: Change react-router-dom import to react-router to resolve missing useNavigate export
+import { useNavigate } from 'react-router';
 import { ChevronLeft } from 'lucide-react';
 
 interface Props {

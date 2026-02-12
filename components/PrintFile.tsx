@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+// Fix: Change react-router-dom import to react-router to resolve missing useNavigate and useSearchParams exports
+import { useNavigate, useSearchParams } from 'react-router';
 import { ChevronLeft, Search, Download, Printer, Info, Copy, CheckCircle2, X } from 'lucide-react';
 import { printSpecs } from '../data/printSpecs';
 
